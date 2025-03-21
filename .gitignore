@@ -1,0 +1,26 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+**/*.py[cod]
+**/__pycache__/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE settings
+.idea/
+.vscode/
+
+# Environment variables
+.env
+
+# Poetry
+poetry.lock 
