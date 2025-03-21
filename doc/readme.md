@@ -28,3 +28,7 @@ Brightness set to 50%: {'error_code': 0}
 2025-03-21 15:30:09,506 - INFO - Successfully sent command: Channel/SetBrightness
 Brightness set to 100%: {'error_code': 0}
 
+
+the json return body for the external call:
+{"ReturnCode":0,"ReturnMessage":"","DispData":"blah"}
+
