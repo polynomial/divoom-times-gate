@@ -1,0 +1,4 @@
+curl -d '{
+"Command":"Channel/SetBrightness",
+"Brightness":0                         
+}' -XPOST -v http://192.168.68.79:80/post

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+file="$2"
+ip="$1"
+curl -d @${file} -XPOST -v http://${ip}:80/post
