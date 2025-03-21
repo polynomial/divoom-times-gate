@@ -84,20 +84,22 @@ def main():
     # Create an instance of the DivoomTimesGate class
     divoom = DivoomTimesGate()
 
-    # Create the display configuration
-    display_data = {
-        "LcdIndex": args.lcd_index,
-        "NewFlag": 1,
-        "BackgroudGif": args.background,
-        "ItemList": create_display_list(
-            text=args.text,
-            text_color=args.text_color,
-            date_color=args.date_color
-        )
-    }
+    # Create the item list
+    item_list = create_display_list(
+        text=args.text,
+        text_color=args.text_color,
+        date_color=args.date_color
+    )
 
     # Send the display configuration
-    response = divoom.send_display_list(**display_data)
+    # Using the method parameters directly instead of unpacking a dictionary
+    response = divoom.send_display_list(
+        lcd_index=args.lcd_index,
+        new_flag=1,
+        background_gif=args.background,
+        item_list=item_list
+    )
+    
     if response:
         print(f"Display updated successfully: {response}")
     else:
