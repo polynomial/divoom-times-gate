@@ -1,0 +1,11 @@
+include README.md
+include LICENSE
+include requirements.txt
+recursive-include divoom_timesgate *.py
+recursive-include docs *.md
+recursive-include examples *.py *.json
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude tests *
+recursive-exclude scripts *
+global-exclude .DS_Store 

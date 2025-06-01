@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""
+Control Divoom Times Gate brightness.
+"""
+
+import sys
+import os
+import asyncio
+import argparse
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from divoom_timesgate import TimesGateDevice
+
+
+async def main():
+    parser = argparse.ArgumentParser(description='Control Divoom Times Gate brightness')
+    parser.add_argument('brightness', type=int, nargs='?', help='Brightness level (0-100)')
+    parser.add_argument('--ip', default=os.environ.get('DIVOOM_TIMES_GATE_IP', '192.168.68.50'),
+                        help='Device IP address')
+    parser.add_argument('--cycle', action='store_true', help='Cycle through brightness levels')
+    
+    args = parser.parse_args()
+    
+    async with TimesGateDevice(args.ip) as device:
+        if args.cycle:
+            print(f"Cycling brightness levels on {args.ip}...")
+            levels = [0, 25, 50, 75, 100]
+            for level in levels:
+                print(f"Setting brightness to {level}%")
+                await device.set_brightness(level)
+                await asyncio.sleep(2)
+        elif args.brightness is not None:
+            if 0 <= args.brightness <= 100:
+                print(f"Setting brightness to {args.brightness}%")
+                await device.set_brightness(args.brightness)
+                print("✓ Brightness set successfully")
+            else:
+                print("Error: Brightness must be between 0 and 100")
+                sys.exit(1)
+        else:
+            # Get current brightness
+            settings = await device.get_settings()
+            current = settings.get('Brightness', 'Unknown')
+            print(f"Current brightness: {current}%")
+
+
+if __name__ == "__main__":
+    asyncio.run(main()) 

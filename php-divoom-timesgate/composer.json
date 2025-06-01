@@ -1,0 +1,22 @@
+{
+    "name": "divoom/timesgate",
+    "description": "PHP library for controlling Divoom Times Gate devices",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Divoom Times Gate Community",
+            "email": "developer@divoom.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.4",
+        "guzzlehttp/guzzle": "^7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Divoom\\TimesGate\\": "src/"
+        }
+    },
+    "minimum-stability": "stable"
+} 

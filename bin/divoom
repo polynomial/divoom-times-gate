@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+"""
+Comprehensive CLI for Divoom Times Gate control.
+"""
+
+import sys
+import os
+import asyncio
+import argparse
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from divoom_timesgate import TimesGateDevice, TextAlignment, FontSize, TemperatureMode, TimeFormat
+
+
+async def cmd_brightness(device, args):
+    """Handle brightness commands."""
+    if args.value is not None:
+        await device.set_brightness(args.value)
+        print(f"✓ Brightness set to {args.value}%")
+    else:
+        settings = await device.get_settings()
+        print(f"Current brightness: {settings.get('Brightness', 'Unknown')}%")
+
+
+async def cmd_screen(device, args):
+    """Handle screen power commands."""
+    if args.power:
+        power_on = args.power == 'on'
+        await device.set_screen_power(power_on)
+        print(f"✓ Screen turned {'on' if power_on else 'off'}")
+    else:
+        settings = await device.get_settings()
+        print(f"Screen is: {'on' if settings.get('LightSwitch', 1) else 'off'}")
+
+
+async def cmd_text(device, args):
+    """Handle text display commands."""
+    if args.clear:
+        await device.clear_text(-1)
+        print("✓ All text cleared")
+    elif args.text:
+        await device.send_text(
+            text=args.text,
+            color=args.color,
+            font=FontSize(args.font),
+            alignment=TextAlignment(args.align),
+            scroll_speed=args.speed
+        )
+        print(f"✓ Text displayed: {args.text}")
+
+
+async def cmd_weather(device, args):
+    """Handle weather commands."""
+    if args.city or (args.lat and args.lon):
+        if args.city:
+            # Simple city to coords mapping (extend as needed)
+            cities = {
+                "new york": (40.7128, -74.0060),
+                "london": (51.5074, -0.1278),
+                "paris": (48.8566, 2.3522),
+                "tokyo": (35.6762, 139.6503),
+            }
+            if args.city.lower() in cities:
+                lat, lon = cities[args.city.lower()]
+            else:
+                print(f"Unknown city. Available: {', '.join(cities.keys())}")
+                return
+        else:
+            lat, lon = args.lat, args.lon
+        
+        await device.set_weather_location(lat, lon)
+        print(f"✓ Weather location set")
+    
+    if args.celsius:
+        await device.set_temperature_mode(TemperatureMode.CELSIUS)
+        print("✓ Temperature mode set to Celsius")
+    elif args.fahrenheit:
+        await device.set_temperature_mode(TemperatureMode.FAHRENHEIT)
+        print("✓ Temperature mode set to Fahrenheit")
+
+
+async def cmd_clock(device, args):
+    """Handle clock commands."""
+    if args.format:
+        time_format = TimeFormat.HOUR_24 if args.format == '24' else TimeFormat.HOUR_12
+        await device.set_time_format(time_format)
+        print(f"✓ Time format set to {args.format}-hour")
+    
+    if args.dial is not None:
+        await device.set_whole_dial(args.dial)
+        print(f"✓ Clock dial set to {args.dial}")
+
+
+async def cmd_timer(device, args):
+    """Handle timer commands."""
+    if args.countdown:
+        parts = args.countdown.split(':')
+        minutes = int(parts[0])
+        seconds = int(parts[1]) if len(parts) > 1 else 0
+        await device.set_countdown(minutes, seconds, True)
+        print(f"✓ Countdown started: {minutes}m {seconds}s")
+    elif args.stop:
+        await device.set_countdown(0, 0, False)
+        print("✓ Countdown stopped")
+
+
+async def cmd_stopwatch(device, args):
+    """Handle stopwatch commands."""
+    if args.action == 'start':
+        await device.set_stopwatch(True)
+        print("✓ Stopwatch started")
+    elif args.action == 'stop':
+        await device.set_stopwatch(False)
+        print("✓ Stopwatch stopped")
+
+
+async def cmd_scoreboard(device, args):
+    """Handle scoreboard commands."""
+    await device.set_scoreboard(args.red, args.blue)
+    print(f"✓ Scoreboard set - Red: {args.red}, Blue: {args.blue}")
+
+
+async def cmd_buzzer(device, args):
+    """Handle buzzer commands."""
+    await device.play_buzzer(args.on, args.off, args.duration)
+    print("✓ Buzzer played")
+
+
+async def cmd_settings(device, args):
+    """Handle settings commands."""
+    settings = await device.get_settings()
+    print("Current Settings:")
+    for key, value in settings.items():
+        if key != 'error_code':
+            print(f"  {key}: {value}")
+
+
+async def cmd_raw(device, args):
+    """Handle raw commands."""
+    import json
+    try:
+        command = json.loads(args.json)
+        response = await device.send_raw_command(command)
+        print("Response:", json.dumps(response, indent=2))
+    except json.JSONDecodeError:
+        print("Error: Invalid JSON")
+
+
+async def main():
+    parser = argparse.ArgumentParser(description='Divoom Times Gate Control')
+    parser.add_argument('--ip', default=os.environ.get('DIVOOM_TIMES_GATE_IP', '192.168.68.50'),
+                        help='Device IP address')
+    
+    subparsers = parser.add_subparsers(dest='command', help='Commands')
+    
+    # Brightness command
+    brightness_parser = subparsers.add_parser('brightness', help='Control brightness')
+    brightness_parser.add_argument('value', type=int, nargs='?', help='Brightness (0-100)')
+    
+    # Screen command
+    screen_parser = subparsers.add_parser('screen', help='Control screen power')
+    screen_parser.add_argument('power', choices=['on', 'off'], nargs='?', help='Power state')
+    
+    # Text command
+    text_parser = subparsers.add_parser('text', help='Display text')
+    text_parser.add_argument('text', nargs='?', help='Text to display')
+    text_parser.add_argument('--color', default='#FFFFFF', help='Text color')
+    text_parser.add_argument('--font', type=int, default=2, choices=[0,1,2,3,4], help='Font size')
+    text_parser.add_argument('--align', type=int, default=1, choices=[0,1,2], help='Alignment')
+    text_parser.add_argument('--speed', type=int, default=0, help='Scroll speed')
+    text_parser.add_argument('--clear', action='store_true', help='Clear all text')
+    
+    # Weather command
+    weather_parser = subparsers.add_parser('weather', help='Configure weather')
+    weather_parser.add_argument('--city', help='City name')
+    weather_parser.add_argument('--lat', type=float, help='Latitude')
+    weather_parser.add_argument('--lon', type=float, help='Longitude')
+    weather_parser.add_argument('--celsius', action='store_true', help='Use Celsius')
+    weather_parser.add_argument('--fahrenheit', action='store_true', help='Use Fahrenheit')
+    
+    # Clock command
+    clock_parser = subparsers.add_parser('clock', help='Configure clock')
+    clock_parser.add_argument('--format', choices=['12', '24'], help='Time format')
+    clock_parser.add_argument('--dial', type=int, help='Clock dial ID')
+    
+    # Timer command
+    timer_parser = subparsers.add_parser('timer', help='Control countdown timer')
+    timer_parser.add_argument('--countdown', help='Start countdown (MM:SS)')
+    timer_parser.add_argument('--stop', action='store_true', help='Stop countdown')
+    
+    # Stopwatch command
+    stopwatch_parser = subparsers.add_parser('stopwatch', help='Control stopwatch')
+    stopwatch_parser.add_argument('action', choices=['start', 'stop'], help='Action')
+    
+    # Scoreboard command
+    scoreboard_parser = subparsers.add_parser('scoreboard', help='Display scoreboard')
+    scoreboard_parser.add_argument('red', type=int, help='Red team score')
+    scoreboard_parser.add_argument('blue', type=int, help='Blue team score')
+    
+    # Buzzer command
+    buzzer_parser = subparsers.add_parser('buzzer', help='Play buzzer')
+    buzzer_parser.add_argument('--on', type=int, default=500, help='On time (ms)')
+    buzzer_parser.add_argument('--off', type=int, default=500, help='Off time (ms)')
+    buzzer_parser.add_argument('--duration', type=int, default=2000, help='Total duration (ms)')
+    
+    # Settings command
+    settings_parser = subparsers.add_parser('settings', help='Show device settings')
+    
+    # Raw command
+    raw_parser = subparsers.add_parser('raw', help='Send raw JSON command')
+    raw_parser.add_argument('json', help='JSON command string')
+    
+    args = parser.parse_args()
+    
+    if not args.command:
+        parser.print_help()
+        return
+    
+    async with TimesGateDevice(args.ip) as device:
+        # Dispatch to appropriate command handler
+        handlers = {
+            'brightness': cmd_brightness,
+            'screen': cmd_screen,
+            'text': cmd_text,
+            'weather': cmd_weather,
+            'clock': cmd_clock,
+            'timer': cmd_timer,
+            'stopwatch': cmd_stopwatch,
+            'scoreboard': cmd_scoreboard,
+            'buzzer': cmd_buzzer,
+            'settings': cmd_settings,
+            'raw': cmd_raw,
+        }
+        
+        handler = handlers.get(args.command)
+        if handler:
+            await handler(device, args)
+
+
+if __name__ == "__main__":
+    asyncio.run(main()) 

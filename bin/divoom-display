@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""
+Display text and images on Divoom Times Gate.
+"""
+
+import sys
+import os
+import asyncio
+import argparse
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from divoom_timesgate import TimesGateDevice, TextAlignment, FontSize
+
+
+async def main():
+    parser = argparse.ArgumentParser(description='Display content on Divoom Times Gate')
+    parser.add_argument('--ip', default=os.environ.get('DIVOOM_TIMES_GATE_IP', '192.168.68.50'),
+                        help='Device IP address')
+    
+    # Text options
+    parser.add_argument('--text', help='Text to display')
+    parser.add_argument('--text-id', type=int, default=1, help='Text ID (0-19)')
+    parser.add_argument('--color', default='#FFFFFF', help='Text color in hex format')
+    parser.add_argument('--font', type=int, default=2, choices=[0, 1, 2, 3, 4],
+                        help='Font size (0=tiny, 1=small, 2=medium, 3=large, 4=huge)')
+    parser.add_argument('--x', type=int, default=0, help='X position')
+    parser.add_argument('--y', type=int, default=0, help='Y position')
+    parser.add_argument('--align', type=int, default=1, choices=[0, 1, 2],
+                        help='Text alignment (0=left, 1=center, 2=right)')
+    parser.add_argument('--speed', type=int, default=0, help='Scroll speed (0=static, 1-100=scroll)')
+    parser.add_argument('--direction', type=int, default=0, choices=[0, 1],
+                        help='Scroll direction (0=left, 1=right)')
+    parser.add_argument('--width', type=int, default=64, help='Text area width')
+    
+    # GIF options
+    parser.add_argument('--gif', help='GIF URL to play')
+    
+    # Clear options
+    parser.add_argument('--clear', action='store_true', help='Clear all text')
+    parser.add_argument('--clear-id', type=int, help='Clear specific text ID')
+    
+    args = parser.parse_args()
+    
+    async with TimesGateDevice(args.ip) as device:
+        if args.clear:
+            print("Clearing all text...")
+            await device.clear_text(-1)
+            print("✓ All text cleared")
+        elif args.clear_id is not None:
+            print(f"Clearing text ID {args.clear_id}...")
+            await device.clear_text(args.clear_id)
+            print(f"✓ Text ID {args.clear_id} cleared")
+        elif args.text:
+            print(f"Displaying text: {args.text}")
+            await device.send_text(
+                text=args.text,
+                text_id=args.text_id,
+                x=args.x,
+                y=args.y,
+                color=args.color,
+                font=FontSize(args.font),
+                alignment=TextAlignment(args.align),
+                scroll_speed=args.speed,
+                direction=args.direction,
+                width=args.width
+            )
+            print("✓ Text displayed")
+        elif args.gif:
+            print(f"Playing GIF: {args.gif}")
+            await device.play_gif(args.gif)
+            print("✓ GIF playing")
+        else:
+            parser.print_help()
+
+
+if __name__ == "__main__":
+    asyncio.run(main()) 
