@@ -1,172 +1,172 @@
-# Divoom Times Gate Controller
+# Divoom Times Gate Python Library
 
-A comprehensive Python and PHP library for controlling Divoom Times Gate devices, with complete API documentation and command-line tools.
+A comprehensive Python library for controlling Divoom Times Gate devices via HTTP API.
 
-## 📖 Documentation
+## Features
 
-Complete documentation is available in the [docs/](docs/) directory:
+- ✨ **Complete API Coverage** - Access all Times Gate functionality
+- 🔄 **Modern Async/Await** - Built on asyncio and aiohttp
+- 🎛️ **Individual Panel Control** - Manage each of the 5 LCD panels independently  
+- 🛠️ **Command Line Tools** - Control your device from the terminal
+- 🌐 **Device Discovery** - Find Times Gate devices on your network
+- 📦 **Display Lists** - Complex custom layouts (like the original display.py)
+- 📝 **Text Display** - Multiple fonts and alignments  
+- ⏱️ **Built-in Tools** - Countdown, stopwatch, scoreboard
+- 🌡️ **Weather & Temperature** - Location-based weather display
+- 🎨 **GIF Animations** - Display animated content
+- 📡 **Raw Commands** - Access undocumented features
 
-- **[API Reference](docs/API_REFERENCE.md)** - Complete HTTP API documentation
-- **[Quick Start Guide](docs/QUICK_START.md)** - Get up and running quickly
-- **[Python Library Documentation](docs/API.md)** - Python API reference
-- **[Examples](docs/examples/)** - Working code examples
+## Important Note: Text Display Limitations
 
-## 🚀 Quick Start
+**Currently, custom text display is not working via the HTTP API.** While the device accepts text commands without errors, text does not appear on the display. This appears to require enabling a specific mode or app via the Divoom mobile app. All other features (timers, scoreboards, weather, brightness, etc.) work correctly.
 
-### Installation
+## Installation
 
-#### From PyPI (when published)
 ```bash
 pip install divoom-timesgate
 ```
 
-#### From Source
+For development with nix-shell:
 ```bash
-# Clone the repository
-git clone https://github.com/divoom-timesgate/divoom-times-gate.git
-cd divoom-times-gate
-
-# Install in development mode
+nix-shell
 pip install -e .
-
-# Or just install dependencies
-pip install -r requirements.txt
 ```
 
-### Basic Usage
+## Quick Start
 
-#### Python Library
 ```python
+import asyncio
 from divoom_timesgate import TimesGateDevice
 
-# Connect to device
-device = TimesGateDevice("192.168.68.50")
+async def main():
+    # Connect to your Times Gate device
+    async with TimesGateDevice("192.168.1.100") as device:
+        # Set brightness
+        await device.set_brightness(50)
+        
+        # Display custom text
+        await device.create_text_display(
+            text="Hello World!",
+            panel=1,
+            color="#00FF00"
+        )
+        
+        # Create multi-item display (like old display.py)
+        from divoom_timesgate import TextDisplayItem, DateTimeDisplayItem
+        
+        items = [
+            TextDisplayItem(1, "Divoom Times Gate", x=0, y=10, color="#FF0000"),
+            DateTimeDisplayItem(2, x=0, y=48)
+        ]
+        await device.create_multi_item_display(items)
+        
+        # Show countdown timer on panel 3
+        await device.set_panel_timer(panel=3, minutes=5, seconds=0)
 
-# Control brightness
-await device.set_brightness(75)
-
-# Display text
-await device.send_text("Hello World", color="#FF0000")
-
-# Play GIF
-await device.play_gif("http://example.com/animation.gif")
+asyncio.run(main())
 ```
 
-#### Command Line
+## Panel Layout
+
+The Times Gate has 5 LCD panels arranged horizontally:
+
+```
+[1] [2] [3] [4] [5]
+```
+
+You can display different content on each panel!
+
+## Command Line Tools
+
+Control your device from the terminal:
+
 ```bash
 # Set brightness
-./bin/divoom brightness 75
+divoom-brightness 75
 
-# Display text
-./bin/divoom text "Hello World" --color "#FF0000"
+# Set weather location
+divoom-weather --city "new york"
 
-# Show weather
-./bin/divoom weather --city "New York"
+# Control display
+divoom-screen on
+divoom-screen off
+
+# Full CLI with all commands
+divoom --help
 ```
 
-#### Direct HTTP API
-```bash
-curl -X POST http://192.168.68.50:80/post \
-  -H "Content-Type: application/json" \
-  -d '{"Command":"Channel/SetBrightness","Brightness":75}'
+## Panel-Specific Features (New Discovery!)
+
+We've discovered undocumented panel-specific control:
+
+```python
+# Different timers on each panel
+await device.set_panel_timer(panel=1, minutes=1, seconds=0)
+await device.set_panel_timer(panel=2, minutes=2, seconds=0)
+
+# Different scores on each panel
+await device.set_panel_scoreboard(panel=1, red_score=10, blue_score=5)
+await device.set_panel_scoreboard(panel=2, red_score=3, blue_score=2)
 ```
 
-## 🔧 Language Bindings
+See [examples/multi_panel_demo.py](examples/multi_panel_demo.py) for interactive demos!
 
-### [Python Library](divoom_timesgate/)
-Full-featured async Python library with comprehensive API coverage:
-- Device discovery
-- System settings control
-- Display management
-- Animation and text display
-- Tools (timer, stopwatch, scoreboard, etc.)
+## API Documentation
 
-### [PHP Library](php-divoom-timesgate/)
-PHP library for web applications (see directory for documentation)
+- [Python API Reference](docs/API.md)
+- [HTTP API Reference](docs/API_REFERENCE.md)
+- [Panel Control Guide](docs/PANEL_CONTROL.md)
+- [Examples](examples/)
 
-## 📦 Repository Structure
+## Working Features
 
-```
-divoom-times-gate/
-├── divoom_timesgate/       # Python library
-│   ├── device.py          # Main device control class
-│   ├── discovery.py       # Device discovery
-│   ├── models.py          # Data models and enums
-│   └── exceptions.py      # Error handling
-├── php-divoom-timesgate/   # PHP library
-├── bin/                    # Command-line tools
-│   ├── divoom             # Main CLI tool
-│   ├── divoom-brightness  # Brightness control
-│   ├── divoom-screen      # Screen control
-│   ├── divoom-display     # Display images/text
-│   └── divoom-weather     # Weather display
-├── docs/                   # Complete documentation
-│   ├── API_REFERENCE.md   # HTTP API reference
-│   ├── API.md            # Python API reference
-│   └── examples/         # Code examples
-└── scripts/               # Utility scripts
-```
+✅ **System Control**
+- Brightness adjustment
+- Screen on/off
+- Temperature unit (°C/°F)
+- Time format (12/24 hour)
+- Device reboot
 
-## ⚡ Features
+✅ **Display Tools**
+- Countdown timers (global and per-panel)
+- Stopwatch
+- Scoreboard (global and per-panel)
+- Noise meter control
 
-- **Complete API Coverage**: All Times Gate HTTP API endpoints
-- **Multiple Interfaces**: Python library, PHP library, CLI tools, direct HTTP
-- **Async Support**: Modern async/await Python implementation
-- **Type Safety**: Full type hints and enums
-- **Device Discovery**: Automatic device detection on local network
-- **Comprehensive Documentation**: Detailed API reference and examples
+✅ **Configuration**
+- Weather location
+- Time zone
+- Mirror mode
 
-## 📡 Device Information
+❌ **Not Working**
+- Custom text display (requires mobile app configuration)
+- Individual panel channel switching
+- GIF animations
 
-The Divoom Times Gate has 5 LCD panels arranged in a cross pattern:
+## Examples
 
-```
-     [2]
-  [1][5][3]
-  [4]
-```
+Check out the [examples](examples/) directory for more:
+- `multi_panel_demo.py` - Interactive demos showing panel-specific control
+- `quick_demo.py` - Basic functionality demo
+- `weather_dashboard.py` - Weather-focused display
+- `game_scoreboard.py` - Sports score tracker
 
-Each panel can be controlled independently or as a group.
+## Contributing
 
-## 🛠️ Development
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-### Running Tests
-```bash
-# Test brightness control
-python tests/test_brightness_simple.py
-
-# Test async version
-python tests/test_brightness.py
-```
-
-### Building the Package
-```bash
-# Install build tools
-pip install build
-
-# Build the package
-python -m build
-```
-
-### Publishing to PyPI
-```bash
-# Install twine
-pip install twine
-
-# Upload to PyPI
-python -m twine upload dist/*
-```
-
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-- Divoom for creating the Times Gate device
-- API documentation from https://docin.divoom-gz.com/
-- Contributors to the Python and PHP implementations
+- Thanks to Divoom for creating these interesting devices
+- API documentation from [https://docin.divoom-gz.com/](https://docin.divoom-gz.com/)
 
-## 📧 Contact
+## Support
 
-For device-specific questions: developer@divoom.com 
+If you encounter any issues or have questions:
+1. Check the [troubleshooting guide](docs/TROUBLESHOOTING.md)
+2. Look at existing [issues](https://github.com/yourusername/divoom-times-gate/issues)
+3. Create a new issue with details about your problem 

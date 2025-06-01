@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+
+"""Control the buzzer on Divoom Times Gate."""
+
+import argparse
+import asyncio
+from divoom_timesgate import TimesGateDevice
+
+
+async def beep(ip, on_time, off_time, total_time, pattern):
+    """Play buzzer with specified pattern."""
+    async with TimesGateDevice(ip) as device:
+        if pattern:
+            # Predefined patterns
+            patterns = {
+                'alert': [(100, 100, 500), (0, 200, 200), (100, 100, 500)],
+                'success': [(50, 50, 200), (0, 100, 100), (50, 50, 200)],
+                'error': [(200, 100, 1000)],
+                'notification': [(100, 100, 300)],
+                'alarm': [(500, 500, 3000)],
+                'double': [(100, 100, 300), (0, 200, 200), (100, 100, 300)],
+                'triple': [(50, 50, 150), (0, 100, 100), (50, 50, 150), (0, 100, 100), (50, 50, 150)]
+            }
+            
+            if pattern in patterns:
+                print(f"Playing '{pattern}' pattern...")
+                for on, off, total in patterns[pattern]:
+                    if on > 0:  # Only play if on_time > 0
+                        await device.play_buzzer(on, off, total)
+                    else:  # This is a pause
+                        await asyncio.sleep(total / 1000.0)
+                print("Done!")
+            else:
+                print(f"Unknown pattern: {pattern}")
+                print(f"Available patterns: {', '.join(patterns.keys())}")
+        else:
+            # Custom beep
+            print(f"Beeping: {on_time}ms on, {off_time}ms off, total {total_time}ms")
+            await device.play_buzzer(on_time, off_time, total_time)
+            print("Done!")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Control the buzzer on Divoom Times Gate',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Single beep
+  divoom-beep --ip 192.168.1.100
+  
+  # Custom pattern
+  divoom-beep --ip 192.168.1.100 --on 200 --off 100 --total 1000
+  
+  # Predefined patterns
+  divoom-beep --ip 192.168.1.100 --pattern alert
+  divoom-beep --ip 192.168.1.100 --pattern success
+  
+Available patterns:
+  alert        - Two short beeps
+  success      - Quick double chirp
+  error        - Long beep
+  notification - Single short beep
+  alarm        - Long continuous beep
+  double       - Two beeps
+  triple       - Three quick beeps
+        """
+    )
+    
+    parser.add_argument('--ip', required=True, help='IP address of the device')
+    parser.add_argument('--on', type=int, default=500,
+                       help='Buzzer on time in milliseconds (default: 500)')
+    parser.add_argument('--off', type=int, default=500,
+                       help='Buzzer off time in milliseconds (default: 500)')
+    parser.add_argument('--total', type=int, default=2000,
+                       help='Total duration in milliseconds (default: 2000)')
+    parser.add_argument('--pattern', choices=['alert', 'success', 'error', 'notification', 'alarm', 'double', 'triple'],
+                       help='Use a predefined beep pattern')
+    
+    args = parser.parse_args()
+    
+    asyncio.run(beep(args.ip, args.on, args.off, args.total, args.pattern))
+
+
+if __name__ == '__main__':
+    main() 

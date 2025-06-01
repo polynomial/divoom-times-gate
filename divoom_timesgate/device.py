@@ -448,6 +448,31 @@ class TimesGateDevice:
         })
         return True
     
+    async def set_panel_timer(self, panel: int, minutes: int, seconds: int, start: bool = True) -> bool:
+        """
+        Set countdown timer on a specific panel.
+        
+        Args:
+            panel: Panel number (1-5)
+            minutes: Minutes (0-99)
+            seconds: Seconds (0-59)
+            start: True to start, False to stop
+            
+        Returns:
+            True if successful
+        """
+        if not 1 <= panel <= 5:
+            raise ValueError("Panel must be between 1 and 5")
+            
+        await self._send_command({
+            "Command": "Tools/SetTimer",
+            "Minute": minutes,
+            "Second": seconds,
+            "Status": 1 if start else 0,
+            "LcdId": panel
+        })
+        return True
+    
     async def set_stopwatch(self, start: bool) -> bool:
         """
         Control the stopwatch.
@@ -481,6 +506,41 @@ class TimesGateDevice:
             "BlueScore": blue_score
         })
         return True
+    
+    async def set_panel_scoreboard(self, panel: int, red_score: int, blue_score: int) -> bool:
+        """
+        Display a scoreboard on a specific panel.
+        
+        Args:
+            panel: Panel number (1-5)
+            red_score: Red team score (0-999)
+            blue_score: Blue team score (0-999)
+            
+        Returns:
+            True if successful
+        """
+        if not 1 <= panel <= 5:
+            raise ValueError("Panel must be between 1 and 5")
+            
+        await self._send_command({
+            "Command": "Tools/SetScoreBoard",
+            "RedScore": red_score,
+            "BlueScore": blue_score,
+            "LcdId": panel
+        })
+        return True
+    
+    async def get_panel_channels(self) -> List[int]:
+        """
+        Get the current channel for each panel.
+        
+        Returns:
+            List of channel indices for panels 1-5
+        """
+        response = await self._send_command({
+            "Command": "Channel/GetIndex"
+        })
+        return response.get("SelectIndex", [])
     
     async def set_noise_meter(self, enabled: bool) -> bool:
         """
@@ -551,4 +611,104 @@ class TimesGateDevice:
         Returns:
             Response from the device
         """
-        return await self._send_command(command) 
+        return await self._send_command(command)
+    
+    async def send_display_list(
+        self,
+        lcd_index: int = 1,
+        new_flag: int = 1,
+        background_gif: str = "http://f.divoom-gz.com/64_64.gif",
+        item_list: List[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Send a display list to the device.
+        
+        Args:
+            lcd_index: LCD panel index (1-5)
+            new_flag: New flag (usually 1)
+            background_gif: Background GIF URL
+            item_list: List of display items
+            
+        Returns:
+            Response from the device
+        """
+        if item_list is None:
+            item_list = []
+            
+        # NOTE: The API requires "BackgroudGif" with the typo, not "BackgroundGif"
+        return await self._send_command({
+            "Command": "Draw/SendHttpItemList",
+            "LcdIndex": lcd_index,
+            "NewFlag": new_flag,
+            "BackgroudGif": background_gif,  # Intentional typo required by API
+            "ItemList": item_list
+        })
+    
+    async def create_text_display(
+        self,
+        text: str,
+        panel: int = 1,
+        x: int = 0,
+        y: int = 24,
+        color: str = "#FFFFFF",
+        font: int = 2,
+        background_gif: str = ""
+    ) -> Dict[str, Any]:
+        """
+        Create a simple text display on a panel.
+        
+        Args:
+            text: Text to display
+            panel: Panel number (1-5)
+            x: X position
+            y: Y position  
+            color: Text color
+            font: Font size (0-4)
+            background_gif: Background GIF URL (optional)
+            
+        Returns:
+            Response from the device
+        """
+        from .models import TextDisplayItem
+        
+        text_item = TextDisplayItem(
+            text_id=1,
+            text=text,
+            x=x,
+            y=y,
+            color=color,
+            font=font
+        )
+        
+        return await self.send_display_list(
+            lcd_index=panel,
+            new_flag=1,
+            background_gif=background_gif,
+            item_list=[text_item.to_dict()]
+        )
+    
+    async def create_multi_item_display(
+        self,
+        items: List['DisplayItem'],
+        panel: int = 1,
+        background_gif: str = "http://f.divoom-gz.com/64_64.gif"
+    ) -> Dict[str, Any]:
+        """
+        Create a display with multiple items.
+        
+        Args:
+            items: List of DisplayItem objects
+            panel: Panel number (1-5)
+            background_gif: Background GIF URL
+            
+        Returns:
+            Response from the device
+        """
+        item_list = [item.to_dict() for item in items]
+        
+        return await self.send_display_list(
+            lcd_index=panel,
+            new_flag=1,
+            background_gif=background_gif,
+            item_list=item_list
+        ) 

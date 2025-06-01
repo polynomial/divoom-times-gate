@@ -286,6 +286,114 @@ Play the device buzzer.
 device.play_buzzer(100, 100, 1000)
 ```
 
+## Display Lists
+
+Display lists allow you to create custom layouts with multiple elements on a panel. This was the method used in the original display.py script.
+
+### send_display_list(lcd_index=1, new_flag=1, background_gif="...", item_list=None)
+Send a display list to show custom content.
+
+**Parameters:**
+- `lcd_index` (int): LCD panel index (1-5)
+- `new_flag` (int): New flag (usually 1)
+- `background_gif` (str): Background GIF URL
+- `item_list` (List[Dict]): List of display items
+
+**Returns:** Dict - Response from device
+
+**Note:** The API requires "BackgroudGif" with the typo, not "BackgroundGif"
+
+**Example:**
+```python
+items = [
+    {
+        "TextId": 1,
+        "type": 22,  # Custom text
+        "x": 0,
+        "y": 24,
+        "dir": 0,
+        "font": 2,
+        "TextWidth": 64,
+        "Textheight": 16,
+        "speed": 0,
+        "align": 1,
+        "TextString": "Hello World",
+        "color": "#FFFFFF"
+    }
+]
+
+await device.send_display_list(
+    lcd_index=1,
+    item_list=items
+)
+```
+
+### create_text_display(text, panel=1, x=0, y=24, color="#FFFFFF", font=2, background_gif="")
+Create a simple text display.
+
+**Parameters:**
+- `text` (str): Text to display
+- `panel` (int): Panel number (1-5)
+- `x` (int): X position
+- `y` (int): Y position
+- `color` (str): Text color
+- `font` (int): Font size (0-4)
+- `background_gif` (str): Background GIF URL
+
+**Returns:** Dict - Response from device
+
+**Example:**
+```python
+await device.create_text_display(
+    text="Hello!",
+    panel=1,
+    color="#00FF00"
+)
+```
+
+### create_multi_item_display(items, panel=1, background_gif="...")
+Create a display with multiple items.
+
+**Parameters:**
+- `items` (List[DisplayItem]): List of DisplayItem objects
+- `panel` (int): Panel number (1-5)
+- `background_gif` (str): Background GIF URL
+
+**Returns:** Dict - Response from device
+
+**Example:**
+```python
+from divoom_timesgate import TextDisplayItem, DateTimeDisplayItem
+
+items = [
+    TextDisplayItem(
+        text_id=1,
+        text="Main Text",
+        x=0,
+        y=10,
+        color="#FF0000",
+        font=2
+    ),
+    DateTimeDisplayItem(
+        text_id=2,
+        x=0,
+        y=48
+    )
+]
+
+await device.create_multi_item_display(items)
+```
+
+### Display Item Types
+
+The following item types are available:
+- `5` - Temperature display
+- `6` - Center item
+- `14` - Top-left item
+- `22` - Custom text (this is what works for displaying text)
+- `23` - Date/time from URL
+- `24` - Weather display
+
 ## Animation and Graphics
 
 ### play_gif(file_names, lcd_array)

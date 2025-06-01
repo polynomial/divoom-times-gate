@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+
+"""Quick text display on Divoom Times Gate."""
+
+import argparse
+import asyncio
+from divoom_timesgate import TimesGateDevice
+
+
+async def display_text(ip, text, position, color):
+    """Display text on specified panel."""
+    async with TimesGateDevice(ip) as device:
+        print(f"Displaying '{text}' on panel {position}...")
+        
+        response = await device.create_text_display(
+            text=text,
+            panel=position,
+            x=0,
+            y=24,  # Center vertically
+            color=color,
+            font=2  # Medium font
+        )
+        
+        if response.get('error_code', 0) == 0:
+            print(f"✓ Text displayed on panel {position}")
+        else:
+            print(f"✗ Failed to display text: {response}")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Quick text display on Divoom Times Gate',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Display "Hello" on panel 1
+  divoom-text --ip 192.168.1.100 "Hello" 1
+  
+  # Display "World" on panel 3 in red
+  divoom-text --ip 192.168.1.100 "World" 3 --color "#FF0000"
+  
+  # Display on each panel
+  divoom-text --ip 192.168.1.100 "Left" 1
+  divoom-text --ip 192.168.1.100 "Top" 2
+  divoom-text --ip 192.168.1.100 "Center" 3
+  divoom-text --ip 192.168.1.100 "Bottom" 4
+  divoom-text --ip 192.168.1.100 "Right" 5
+        """
+    )
+    
+    parser.add_argument('--ip', required=True, help='IP address of the device')
+    parser.add_argument('text', help='Text to display')
+    parser.add_argument('position', type=int, choices=[1, 2, 3, 4, 5],
+                       help='Panel position (1-5): 1=left, 2=top, 3=center, 4=bottom, 5=right')
+    parser.add_argument('--color', default='#FFFFFF',
+                       help='Text color in hex format (default: #FFFFFF)')
+    
+    args = parser.parse_args()
+    
+    asyncio.run(display_text(args.ip, args.text, args.position, args.color))
+
+
+if __name__ == '__main__':
+    main() 

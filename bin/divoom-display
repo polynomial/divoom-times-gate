@@ -1,79 +1,111 @@
 #!/usr/bin/env python3
-"""
-Display text and images on Divoom Times Gate.
-"""
 
-import sys
-import os
-import asyncio
+"""Display custom content on Divoom Times Gate."""
+
 import argparse
-
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from divoom_timesgate import TimesGateDevice, TextAlignment, FontSize
+import asyncio
+import sys
+from divoom_timesgate import TimesGateDevice, TextDisplayItem, DateTimeDisplayItem
 
 
-async def main():
-    parser = argparse.ArgumentParser(description='Display content on Divoom Times Gate')
-    parser.add_argument('--ip', default=os.environ.get('DIVOOM_TIMES_GATE_IP', '192.168.68.50'),
-                        help='Device IP address')
+async def display_text(ip, text, panel, color, font, x, y):
+    """Display simple text."""
+    async with TimesGateDevice(ip) as device:
+        response = await device.create_text_display(
+            text=text,
+            panel=panel,
+            x=x,
+            y=y,
+            color=color,
+            font=font
+        )
+        if response.get('error_code', 0) == 0:
+            print(f"Text displayed on panel {panel}")
+        else:
+            print(f"Failed to display text: {response}")
+
+
+async def display_composite(ip, panel):
+    """Display composite layout with text and date."""
+    async with TimesGateDevice(ip) as device:
+        items = [
+            TextDisplayItem(
+                text_id=1,
+                text="Times Gate",
+                x=0,
+                y=10,
+                color="#FF0000",
+                font=2,
+                speed=50  # Scrolling
+            ),
+            TextDisplayItem(
+                text_id=2,
+                text="Python API",
+                x=0,
+                y=30,
+                color="#00FF00",
+                font=1,
+                speed=0  # Static
+            ),
+            DateTimeDisplayItem(
+                text_id=3,
+                x=0,
+                y=48,
+                color="#FFFF00",
+                font=0
+            )
+        ]
+        
+        response = await device.create_multi_item_display(
+            items=items,
+            panel=panel
+        )
+        
+        if response.get('error_code', 0) == 0:
+            print(f"Composite display created on panel {panel}")
+        else:
+            print(f"Failed to create display: {response}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Display custom content on Divoom Times Gate')
+    parser.add_argument('--ip', required=True, help='IP address of the device')
     
-    # Text options
-    parser.add_argument('--text', help='Text to display')
-    parser.add_argument('--text-id', type=int, default=1, help='Text ID (0-19)')
-    parser.add_argument('--color', default='#FFFFFF', help='Text color in hex format')
-    parser.add_argument('--font', type=int, default=2, choices=[0, 1, 2, 3, 4],
-                        help='Font size (0=tiny, 1=small, 2=medium, 3=large, 4=huge)')
-    parser.add_argument('--x', type=int, default=0, help='X position')
-    parser.add_argument('--y', type=int, default=0, help='Y position')
-    parser.add_argument('--align', type=int, default=1, choices=[0, 1, 2],
-                        help='Text alignment (0=left, 1=center, 2=right)')
-    parser.add_argument('--speed', type=int, default=0, help='Scroll speed (0=static, 1-100=scroll)')
-    parser.add_argument('--direction', type=int, default=0, choices=[0, 1],
-                        help='Scroll direction (0=left, 1=right)')
-    parser.add_argument('--width', type=int, default=64, help='Text area width')
+    subparsers = parser.add_subparsers(dest='command', help='Command to execute')
     
-    # GIF options
-    parser.add_argument('--gif', help='GIF URL to play')
+    # Text command
+    text_parser = subparsers.add_parser('text', help='Display simple text')
+    text_parser.add_argument('text', help='Text to display')
+    text_parser.add_argument('--panel', type=int, default=1, choices=[1,2,3,4,5],
+                           help='Panel to display on (1-5, default: 1)')
+    text_parser.add_argument('--color', default='#FFFFFF',
+                           help='Text color in hex (default: #FFFFFF)')
+    text_parser.add_argument('--font', type=int, default=2, choices=[0,1,2,3,4],
+                           help='Font size (0-4, default: 2)')
+    text_parser.add_argument('--x', type=int, default=0,
+                           help='X position (default: 0)')
+    text_parser.add_argument('--y', type=int, default=24,
+                           help='Y position (default: 24)')
     
-    # Clear options
-    parser.add_argument('--clear', action='store_true', help='Clear all text')
-    parser.add_argument('--clear-id', type=int, help='Clear specific text ID')
+    # Composite command
+    comp_parser = subparsers.add_parser('composite', help='Display composite layout')
+    comp_parser.add_argument('--panel', type=int, default=1, choices=[1,2,3,4,5],
+                           help='Panel to display on (1-5, default: 1)')
     
     args = parser.parse_args()
     
-    async with TimesGateDevice(args.ip) as device:
-        if args.clear:
-            print("Clearing all text...")
-            await device.clear_text(-1)
-            print("✓ All text cleared")
-        elif args.clear_id is not None:
-            print(f"Clearing text ID {args.clear_id}...")
-            await device.clear_text(args.clear_id)
-            print(f"✓ Text ID {args.clear_id} cleared")
-        elif args.text:
-            print(f"Displaying text: {args.text}")
-            await device.send_text(
-                text=args.text,
-                text_id=args.text_id,
-                x=args.x,
-                y=args.y,
-                color=args.color,
-                font=FontSize(args.font),
-                alignment=TextAlignment(args.align),
-                scroll_speed=args.speed,
-                direction=args.direction,
-                width=args.width
-            )
-            print("✓ Text displayed")
-        elif args.gif:
-            print(f"Playing GIF: {args.gif}")
-            await device.play_gif(args.gif)
-            print("✓ GIF playing")
-        else:
-            parser.print_help()
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
+    
+    if args.command == 'text':
+        asyncio.run(display_text(
+            args.ip, args.text, args.panel, 
+            args.color, args.font, args.x, args.y
+        ))
+    elif args.command == 'composite':
+        asyncio.run(display_composite(args.ip, args.panel))
 
 
-if __name__ == "__main__":
-    asyncio.run(main()) 
+if __name__ == '__main__':
+    main() 

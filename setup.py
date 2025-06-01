@@ -7,4 +7,14 @@ This is here for backward compatibility. The package is configured via pyproject
 from setuptools import setup
 
 if __name__ == "__main__":
-    setup() 
+    setup(
+        scripts=[
+            'bin/divoom',
+            'bin/divoom-brightness',
+            'bin/divoom-screen',
+            'bin/divoom-weather',
+            'bin/divoom-display',
+            'bin/divoom-beep',
+            'bin/divoom-text',
+        ],
+    ) 
