@@ -2,12 +2,12 @@
 
 pkgs.mkShell {
   buildInputs = with pkgs; [
-    python310
-    python310Packages.pip
-    python310Packages.setuptools
-    python310Packages.wheel
-    python310Packages.aiohttp
-    python310Packages.requests
+    python311
+    python311Packages.pip
+    python311Packages.setuptools
+    python311Packages.wheel
+    python311Packages.aiohttp
+    python311Packages.requests
   ];
 
   shellHook = ''

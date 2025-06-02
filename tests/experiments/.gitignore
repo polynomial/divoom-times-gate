@@ -1,0 +1,5 @@
+# Experimental test files
+# These are kept for reference but not tracked in git
+*
+!.gitignore
+!README.md 
